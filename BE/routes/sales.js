@@ -1,5 +1,4 @@
 // backend/routes/sales.js
-// Schema: orders.total_amount, orders.status, orders.created_by
 const express  = require('express');
 const router   = express.Router();
 const { authenticate } = require('../middleware/auth');
@@ -51,7 +50,6 @@ router.get('/', authenticate, async (req, res) => {
     return res.json(weeks);
   }
 
-  // monthly
   const months = [];
   for (let m = 2; m >= 0; m--) {
     const d  = new Date(now.getFullYear(), now.getMonth() - m, 1);
@@ -60,6 +58,37 @@ router.get('/', authenticate, async (req, res) => {
     months.push({ date: `${yr}-${String(mo + 1).padStart(2, '0')}`, month: `${yr}-${String(mo + 1).padStart(2, '0')}`, revenue: mo_orders.reduce((s, o) => s + Number(o.total_amount), 0), order_count: mo_orders.length });
   }
   return res.json(months);
+});
+
+// GET /api/sales/by-branch?period=daily|weekly|monthly
+router.get('/by-branch', authenticate, async (req, res) => {
+  const period = (req.query.period || 'daily').toLowerCase();
+  const now    = new Date();
+  let fromDate;
+
+  if (period === 'monthly')     { fromDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); }
+  else if (period === 'weekly') { fromDate = new Date(now); fromDate.setDate(now.getDate() - 27); }
+  else                          { fromDate = new Date(now); fromDate.setDate(now.getDate() - 6); }
+
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select('total_amount, store_id, created_at, stores(name)')
+    .eq('status', 'completed')
+    .gte('created_at', fromDate.toISOString());
+
+  if (error) return res.status(500).json({ message: error.message });
+
+  const storeMap = {};
+  for (const o of orders || []) {
+    const sid  = o.store_id;
+    const name = o.stores?.name || `Store #${sid}`;
+    if (!storeMap[sid]) storeMap[sid] = { store_id: sid, store_name: name, revenue: 0, order_count: 0 };
+    storeMap[sid].revenue     += Number(o.total_amount);
+    storeMap[sid].order_count += 1;
+  }
+
+  const result = Object.values(storeMap).sort((a, b) => b.revenue - a.revenue);
+  res.json(result);
 });
 
 module.exports = router;

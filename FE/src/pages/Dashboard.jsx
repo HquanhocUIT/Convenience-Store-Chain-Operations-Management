@@ -1,3 +1,4 @@
+/* eslint-disable no-empty */
 import { useEffect, useState, useRef } from 'react';
 import {
   Chart, BarElement, CategoryScale, LinearScale, Tooltip,
