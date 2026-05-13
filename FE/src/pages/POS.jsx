@@ -63,7 +63,7 @@ export default function POS() {
   const [receipt, setReceipt]   = useState(null);
 
   useEffect(() => { loadStores(); }, []);
-  useEffect(() => { if (storeId) loadProducts(); }, [storeId]);
+  useEffect(() => { if (storeId) loadProducts(storeId); }, [storeId]);
 
   async function loadStores() {
     try {
@@ -75,9 +75,9 @@ export default function POS() {
     } catch (e) { console.error(e); }
   }
 
-  async function loadProducts() {
+  async function loadProducts(sid) {
     try {
-      const r = await apiFetch('/products');
+      const r = await apiFetch(`/products?store_id=${sid}`);
       const d = await r.json();
       setProducts(Array.isArray(d) ? d : []);
     } catch (e) { console.error(e); }
@@ -96,9 +96,11 @@ export default function POS() {
   }
 
   function changeQty(productId, delta) {
-    setCart(prev => prev
-      .map(i => i.product_id === productId ? { ...i, quantity: Math.max(1, Math.min(i.max, i.quantity + delta)) } : i)
-    );
+    setCart(prev => prev.map(i =>
+      i.product_id === productId
+        ? { ...i, quantity: Math.max(1, Math.min(i.max, i.quantity + delta)) }
+        : i
+    ));
   }
 
   function removeFromCart(productId) {
@@ -129,7 +131,7 @@ export default function POS() {
       const storeName = stores.find(s => String(s.id) === storeId)?.name || 'CS Chain';
       setReceipt({ order: { ...data, total_amount: total }, items: [...cart], store: storeName });
       setCart([]);
-      await loadProducts();
+      await loadProducts(storeId);
     } catch (e) { alert('Lỗi kết nối server'); console.error(e); }
     finally { setLoading(false); }
   }
