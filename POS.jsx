@@ -1,21 +1,20 @@
-/* eslint-disable no-empty */
 import { useEffect, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import { apiFetch } from '../utils/api';
 
-const fmt = n => new Intl.NumberFormat('vi-VN').format(n) + '₫';
+const fmt = n => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
 
 function StockBadge({ stock }) {
-  if (stock <= 0)  return <span style={badge('var(--danger)')}>Out of Stock</span>;
-  if (stock <= 10) return <span style={badge('var(--warning)')}>Low: {stock}</span>;
-  return <span style={badge('var(--success)')}>In Stock: {stock}</span>;
+  if (stock <= 0)  return <span style={badge('var(--danger)')}>Hết hàng</span>;
+  if (stock <= 10) return <span style={badge('var(--warning)')}>Còn {stock}</span>;
+  return <span style={badge('var(--success)')}>Còn {stock}</span>;
 }
 function badge(color) {
   return { background: color + '22', color, fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 99 };
 }
 
 function Receipt({ order, items, store, onClose }) {
-  const now = new Date().toLocaleString('en-US');
+  const now = new Date().toLocaleString('vi-VN');
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: '#fff', color: '#111', borderRadius: 12, padding: '2rem', width: 380, fontFamily: 'monospace' }}>
@@ -23,7 +22,7 @@ function Receipt({ order, items, store, onClose }) {
           <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>CS CHAIN</div>
           <div style={{ fontSize: '0.8rem' }}>{store}</div>
           <div style={{ fontSize: '0.75rem', color: '#666' }}>{now}</div>
-          <div style={{ fontSize: '0.75rem', color: '#666' }}>Order #{order.id}</div>
+          <div style={{ fontSize: '0.75rem', color: '#666' }}>Đơn #{order.id}</div>
         </div>
         <div style={{ borderTop: '1px dashed #ccc', borderBottom: '1px dashed #ccc', padding: '0.75rem 0', margin: '0.75rem 0' }}>
           {items.map((it, i) => (
@@ -34,18 +33,18 @@ function Receipt({ order, items, store, onClose }) {
           ))}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1rem', marginBottom: '0.5rem' }}>
-          <span>TOTAL</span>
+          <span>TỔNG CỘNG</span>
           <span>{fmt(order.total_amount)}</span>
         </div>
         <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#888', marginTop: '0.5rem', marginBottom: '1.25rem' }}>
-          Thank you for your purchase! 😊
+          Cảm ơn quý khách! Hẹn gặp lại 😊
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => window.print()} style={{ flex: 1, padding: '0.5rem', background: '#0f1629', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
-            🖨️ Print Receipt
+            🖨️ In hóa đơn
           </button>
           <button onClick={onClose} style={{ flex: 1, padding: '0.5rem', background: '#e5e7eb', color: '#111', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
-            Close
+            Đóng
           </button>
         </div>
       </div>
@@ -73,7 +72,7 @@ export default function POS() {
       const list = j.stores || [];
       setStores(list);
       if (list.length > 0) setStoreId(String(list[0].id));
-    } catch {}
+    } catch (e) { console.error(e); }
   }
 
   async function loadProducts(sid) {
@@ -81,7 +80,7 @@ export default function POS() {
       const r = await apiFetch(`/products?store_id=${sid}`);
       const d = await r.json();
       setProducts(Array.isArray(d) ? d : []);
-    } catch {}
+    } catch (e) { console.error(e); }
   }
 
   function addToCart(p) {
@@ -128,12 +127,12 @@ export default function POS() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) { alert(data.error || data.message || 'Checkout failed'); return; }
+      if (!res.ok) { alert(data.error || data.message || 'Thanh toán thất bại'); return; }
       const storeName = stores.find(s => String(s.id) === storeId)?.name || 'CS Chain';
       setReceipt({ order: { ...data, total_amount: total }, items: [...cart], store: storeName });
       setCart([]);
       await loadProducts(storeId);
-    } catch { alert('Cannot connect to server'); }
+    } catch (e) { alert('Lỗi kết nối server'); console.error(e); }
     finally { setLoading(false); }
   }
 
@@ -143,8 +142,8 @@ export default function POS() {
       <main className="main-content" style={{ padding: '1.5rem' }}>
         <div className="topbar" style={{ marginBottom: '1rem' }}>
           <div className="topbar-left">
-            <h1>POS — Point of Sale</h1>
-            <p>Select products → add to cart → checkout</p>
+            <h1>POS — Bán Hàng</h1>
+            <p>Chọn sản phẩm → thêm vào giỏ → thanh toán</p>
           </div>
           <select className="cs-select" value={storeId} onChange={e => { setStoreId(e.target.value); setCart([]); }} style={{ minWidth: 180 }}>
             {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -152,18 +151,19 @@ export default function POS() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '1.25rem', height: 'calc(100vh - 140px)' }}>
+
           {/* LEFT: Product Grid */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', overflow: 'hidden' }}>
             <div style={{ display: 'flex', gap: 8 }}>
               <div className="search-wrap" style={{ flex: 1 }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input className="search-input" style={{ width: '100%' }} placeholder="Search products…" value={search} onChange={e => setSearch(e.target.value)} />
+                <input className="search-input" style={{ width: '100%' }} placeholder="Tìm sản phẩm…" value={search} onChange={e => setSearch(e.target.value)} />
               </div>
               <div style={{ display: 'flex', gap: 4, background: 'var(--navy-2)', borderRadius: 8, padding: 4, flexWrap: 'wrap' }}>
                 {categories.map(c => (
                   <button key={c} onClick={() => setCategory(c)}
                     style={{ padding: '0.3rem 0.75rem', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 600, background: category === c ? 'var(--accent)' : 'transparent', color: category === c ? '#0f1629' : 'var(--text-muted)', transition: 'all 0.15s' }}>
-                    {c === 'all' ? 'All' : c}
+                    {c === 'all' ? 'Tất cả' : c}
                   </button>
                 ))}
               </div>
@@ -191,7 +191,7 @@ export default function POS() {
                 );
               })}
               {filtered.length === 0 && (
-                <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No products found</div>
+                <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>Không tìm thấy sản phẩm</div>
               )}
             </div>
           </div>
@@ -199,13 +199,13 @@ export default function POS() {
           {/* RIGHT: Cart */}
           <div style={{ background: 'var(--navy-card)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '0.95rem' }}>
-              🛒 Cart {cart.length > 0 && <span style={{ background: 'var(--accent)', color: '#0f1629', borderRadius: 99, padding: '1px 8px', fontSize: '0.75rem', marginLeft: 6 }}>{cart.length}</span>}
+              🛒 Giỏ hàng {cart.length > 0 && <span style={{ background: 'var(--accent)', color: '#0f1629', borderRadius: 99, padding: '1px 8px', fontSize: '0.75rem', marginLeft: 6 }}>{cart.length}</span>}
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 1rem' }}>
               {cart.length === 0 ? (
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem 0', fontSize: '0.875rem' }}>
-                  No items yet<br />Click a product to add
+                  Chưa có sản phẩm<br />Bấm vào sản phẩm để thêm
                 </div>
               ) : cart.map(item => (
                 <div key={item.product_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.6rem 0', borderBottom: '1px solid var(--border)' }}>
@@ -226,16 +226,16 @@ export default function POS() {
 
             <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
-                <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Total</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Tổng cộng</span>
                 <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--success)' }}>{fmt(total)}</span>
               </div>
               <button onClick={handleCheckout} disabled={cart.length === 0 || loading}
                 style={{ width: '100%', padding: '0.75rem', background: cart.length === 0 ? 'var(--navy-3)' : 'var(--accent)', color: cart.length === 0 ? 'var(--text-muted)' : '#0f1629', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '1rem', cursor: cart.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', marginBottom: 8 }}>
-                {loading ? 'Processing…' : `💳 Checkout ${cart.length > 0 ? fmt(total) : ''}`}
+                {loading ? 'Đang xử lý…' : `💳 Thanh toán ${cart.length > 0 ? fmt(total) : ''}`}
               </button>
               {cart.length > 0 && (
                 <button onClick={() => setCart([])} style={{ width: '100%', padding: '0.5rem', background: 'transparent', color: 'var(--danger)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Clear Cart
+                  Xóa giỏ hàng
                 </button>
               )}
             </div>

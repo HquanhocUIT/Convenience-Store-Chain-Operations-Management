@@ -1,4 +1,5 @@
 /* eslint-disable */
+/* eslint-disable no-empty */
 import { useEffect, useRef, useState } from 'react';
 import {
   Chart, LineElement, LineController, PointElement,
@@ -10,30 +11,30 @@ import { apiFetch } from '../utils/api';
 
 Chart.register(LineElement, LineController, PointElement, BarElement, BarController, CategoryScale, LinearScale, Filler, Tooltip);
 
-const fmt = n => new Intl.NumberFormat('vi-VN').format(n) + '₫';
+const fmt = n => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
 
 function PeriodToggle({ period, setPeriod }) {
   return (
     <div className="period-toggle">
-      {[['daily','Daily'], ['weekly','Weekly'], ['monthly','Monthly']].map(([val, label]) => (
-        <button key={val} className={`period-btn${period === val ? ' active' : ''}`} onClick={() => setPeriod(val)}>
-          {label}
+      {['daily', 'weekly', 'monthly'].map(p => (
+        <button key={p} className={`period-btn${period === p ? ' active' : ''}`} onClick={() => setPeriod(p)}>
+          {p === 'daily' ? 'Ngày' : p === 'weekly' ? 'Tuần' : 'Tháng'}
         </button>
       ))}
     </div>
   );
 }
 
-// ── TAB 1: Overview ───────────────────────────────────────
+// ── TAB 1: Tổng quan ─────────────────────────────────────
 function TabOverview() {
-  const [period, setPeriod]   = useState('daily');
-  const [summary, setSummary] = useState({ revenue: 0, orders: 0, avg: 0 });
+  const [period, setPeriod] = useState('daily');
+  const [summary, setSummary] = useState({ revenue: '0', orders: 0, avg: '0' });
   const [rows, setRows]       = useState([]);
   const chartRef  = useRef(null);
   const chartInst = useRef(null);
 
   useEffect(() => {
-    async function load() {
+    async function fetch() {
       try {
         const r = await apiFetch(`/sales?period=${period}`);
         if (!r.ok) return;
@@ -41,12 +42,12 @@ function TabOverview() {
         if (!Array.isArray(data)) return;
         const totalRev = data.reduce((s, d) => s + (d.revenue || 0), 0);
         const totalOrd = data.reduce((s, d) => s + (d.order_count || 0), 0);
-        setSummary({ revenue: totalRev, orders: totalOrd, avg: totalOrd > 0 ? Math.round(totalRev / totalOrd) : 0 });
+        setSummary({ revenue: totalRev.toLocaleString('vi-VN'), orders: totalOrd, avg: totalOrd > 0 ? Math.round(totalRev / totalOrd).toLocaleString('vi-VN') : '0' });
         setRows(data);
         renderChart(data);
       } catch {}
     }
-    load();
+    fetch();
   }, [period]);
 
   function renderChart(data) {
@@ -77,39 +78,39 @@ function TabOverview() {
 
       <div className="stats-row" style={{ marginBottom: '1.5rem' }}>
         <div className="stat-card">
-          <div className="stat-value" style={{ color: 'var(--success)' }}>{fmt(summary.revenue)}</div>
-          <div className="stat-label">Total Revenue</div>
+          <div className="stat-value" style={{ color: 'var(--success)' }}>{fmt(parseInt(summary.revenue.replace(/\./g,'')) || 0)}</div>
+          <div className="stat-label">Tổng doanh thu</div>
         </div>
         <div className="stat-card">
           <div className="stat-value" style={{ color: 'var(--accent)' }}>{summary.orders}</div>
-          <div className="stat-label">Total Orders</div>
+          <div className="stat-label">Tổng đơn hàng</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value" style={{ color: 'var(--accent-2)' }}>{fmt(summary.avg)}</div>
-          <div className="stat-label">Avg. Order Value</div>
+          <div className="stat-value" style={{ color: 'var(--accent-2)' }}>{fmt(parseInt(summary.avg.replace(/\./g,'')) || 0)}</div>
+          <div className="stat-label">Trung bình / đơn</div>
         </div>
       </div>
 
       <div className="cs-card" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '1.25rem' }}>Revenue Trend</div>
+        <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '1.25rem' }}>Xu hướng doanh thu</div>
         <div style={{ height: 280, position: 'relative' }}>
           <canvas ref={chartRef}></canvas>
         </div>
       </div>
 
       <div className="cs-card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '1rem 1.25rem', fontWeight: 600, fontSize: '0.95rem', borderBottom: '1px solid var(--border)' }}>Order History</div>
+        <div style={{ padding: '1rem 1.25rem', fontWeight: 600, fontSize: '0.95rem', borderBottom: '1px solid var(--border)' }}>Lịch sử đơn hàng</div>
         <table className="cs-table">
-          <thead><tr><th>Period</th><th>Orders</th><th>Revenue</th><th>Status</th></tr></thead>
+          <thead><tr><th>Kỳ</th><th>Số đơn</th><th>Doanh thu</th><th>Trạng thái</th></tr></thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No data.</td></tr>
+              <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>Không có dữ liệu.</td></tr>
             ) : rows.map((d, i) => (
               <tr key={i}>
                 <td style={{ color: 'var(--text-muted)' }}>{d.date || (d.start && `${d.start} → ${d.end}`) || d.month}</td>
                 <td style={{ fontWeight: 600 }}>{d.order_count || 0}</td>
                 <td style={{ fontWeight: 600, color: 'var(--success)' }}>{fmt(d.revenue || 0)}</td>
-                <td><span className="badge-active">Completed</span></td>
+                <td><span className="badge-active">Hoàn thành</span></td>
               </tr>
             ))}
           </tbody>
@@ -119,15 +120,15 @@ function TabOverview() {
   );
 }
 
-// ── TAB 2: By Branch ──────────────────────────────────────
+// ── TAB 2: Theo Chi Nhánh ────────────────────────────────
 function TabByBranch() {
-  const [period, setPeriod]     = useState('daily');
+  const [period, setPeriod]   = useState('daily');
   const [branches, setBranches] = useState([]);
   const chartRef  = useRef(null);
   const chartInst = useRef(null);
 
   useEffect(() => {
-    async function load() {
+    async function fetch() {
       try {
         const r = await apiFetch(`/sales/by-branch?period=${period}`);
         if (!r.ok) return;
@@ -137,13 +138,15 @@ function TabByBranch() {
         renderChart(data);
       } catch {}
     }
-    load();
+    fetch();
   }, [period]);
 
   function renderChart(data) {
     if (!chartRef.current) return;
     if (chartInst.current) chartInst.current.destroy();
+
     const colors = ['rgba(56,189,248,0.8)', 'rgba(52,211,153,0.8)', 'rgba(251,191,36,0.8)', 'rgba(129,140,248,0.8)', 'rgba(248,113,113,0.8)', 'rgba(251,146,60,0.8)'];
+
     chartInst.current = new Chart(chartRef.current, {
       type: 'bar',
       data: {
@@ -151,7 +154,8 @@ function TabByBranch() {
         datasets: [{
           data: data.map(d => d.revenue || 0),
           backgroundColor: data.map((_, i) => colors[i % colors.length]),
-          borderRadius: 6, borderSkipped: false,
+          borderRadius: 6,
+          borderSkipped: false,
         }],
       },
       options: {
@@ -174,35 +178,40 @@ function TabByBranch() {
         <PeriodToggle period={period} setPeriod={setPeriod} />
       </div>
 
+      {/* Summary */}
       <div className="stats-row" style={{ marginBottom: '1.5rem' }}>
         <div className="stat-card">
           <div className="stat-value" style={{ color: 'var(--success)' }}>{fmt(totalRevenue)}</div>
-          <div className="stat-label">Total Revenue</div>
+          <div className="stat-label">Tổng doanh thu</div>
         </div>
         <div className="stat-card">
           <div className="stat-value" style={{ color: 'var(--accent)' }}>{totalOrders}</div>
-          <div className="stat-label">Total Orders</div>
+          <div className="stat-label">Tổng đơn hàng</div>
         </div>
         <div className="stat-card">
           <div className="stat-value" style={{ color: 'var(--accent-2)' }}>{branches.length}</div>
-          <div className="stat-label">Active Branches</div>
+          <div className="stat-label">Chi nhánh có doanh thu</div>
         </div>
       </div>
 
+      {/* Bar chart */}
       <div className="cs-card" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '1.25rem' }}>Revenue by Branch</div>
+        <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '1.25rem' }}>So sánh doanh thu theo chi nhánh</div>
         <div style={{ height: 300, position: 'relative' }}>
           <canvas ref={chartRef}></canvas>
         </div>
       </div>
 
+      {/* Table */}
       <div className="cs-card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '1rem 1.25rem', fontWeight: 600, fontSize: '0.95rem', borderBottom: '1px solid var(--border)' }}>Branch Breakdown</div>
+        <div style={{ padding: '1rem 1.25rem', fontWeight: 600, fontSize: '0.95rem', borderBottom: '1px solid var(--border)' }}>Chi tiết theo chi nhánh</div>
         <table className="cs-table">
-          <thead><tr><th>Rank</th><th>Branch</th><th>Orders</th><th>Revenue</th><th>% of Total</th></tr></thead>
+          <thead>
+            <tr><th>Hạng</th><th>Chi nhánh</th><th>Số đơn</th><th>Doanh thu</th><th>% Tổng</th></tr>
+          </thead>
           <tbody>
             {branches.length === 0 ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No data.</td></tr>
+              <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>Không có dữ liệu.</td></tr>
             ) : branches.map((b, i) => {
               const pct = totalRevenue > 0 ? ((b.revenue / totalRevenue) * 100).toFixed(1) : '0';
               const medals = ['🥇', '🥈', '🥉'];
@@ -241,14 +250,14 @@ export default function Reports() {
         <div className="topbar">
           <div className="topbar-left">
             <h1>Reports</h1>
-            <p>Revenue analytics and performance insights</p>
+            <p>Thống kê doanh thu và phân tích</p>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--border)', marginBottom: '1.25rem' }}>
           {[
-            { id: 'overview', label: '📊 Overview' },
-            { id: 'branch',   label: '🏪 By Branch' },
+            { id: 'overview', label: '📊 Tổng quan' },
+            { id: 'branch',   label: '🏪 Theo Chi Nhánh' },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               padding: '0.5rem 1.25rem', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
